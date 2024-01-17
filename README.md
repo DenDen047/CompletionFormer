@@ -36,8 +36,8 @@ conda create -n completionformer python=3.8
 conda activate completionformer
 # For CUDA Version == 11.3
 pip install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1+cu113
-pip install mmcv-full==1.4.4 mmsegmentation==0.22.1  
-pip install timm tqdm thop tensorboardX opencv-python ipdb h5py ipython Pillow==9.5.0 
+pip install mmcv-full==1.4.4 mmsegmentation==0.22.1
+pip install timm tqdm thop tensorboardX opencv-python ipdb h5py ipython Pillow==9.5.0
 ```
 We ran our experiments with PyTorch 1.10.1, CUDA 11.3, Python 3.8 and Ubuntu 20.04.
 
@@ -54,7 +54,7 @@ $ cd PATH_TO_INSTALL
 $ git clone https://github.com/NVIDIA/apex
 $ cd apex
 $ git reset --hard 4ef930c1c884fdca5f472ab2ce7cb9b505d26c1a
-$ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./ 
+$ pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
 ```
 
 
@@ -70,6 +70,14 @@ $ sh make.sh
 The DCN module in this repository is from [here](https://github.com/xvjiarui/Deformable-Convolution-V2-PyTorch) but some function names are slightly different.
 
 Please refer to the [PyTorch DCN](https://github.com/chengdazhi/Deformable-Convolution-V2-PyTorch) for the original implementation.
+
+
+## Docker
+
+```bash
+$ docker build -t denden047/completion_former .
+$ docker run -it --rm --gpus 1 denden047/completion_former /bin/bash
+```
 
 
 ## 💾 Datasets
@@ -143,7 +151,7 @@ The overall data directory is structured as follows:
 |   |   ├── 2011_10_03
 ```
 
-After preparing the dataset, you should generate a json file containing paths to individual images. 
+After preparing the dataset, you should generate a json file containing paths to individual images.
 
 Especially, we also provide [json file](./data_json/kitti_dc_1e4.json) which lists the randomly selected 10,000 samples for sparsity study.
 
@@ -168,7 +176,7 @@ $ cd THIS_PROJECT_ROOT/src
 $ python main.py --dir_data PATH_TO_NYUv2 --data_name NYU  --split_json ../data_json/nyu.json \
     --gpus 0 --loss 1.0*L1+1.0*L2 --batch_size 12 --milestones 36 48 56 64 72 --epochs 72 \
     --log_dir ../experiments/ --save NAME_TO_SAVE \
-    
+
 # An example command for KITTI DC dataset training: L1 loss
 $ python main.py --dir_data PATH_TO_KITTI_DC --data_name KITTIDC --split_json ../data_json/kitti_dc.json \
     --patch_height 240 --patch_width 1216 --gpus 0,1,2,3 --loss 1.0*L1 --lidar_lines 64 \
@@ -188,9 +196,9 @@ $ python main.py --dir_data PATH_TO_KITTI_DC --data_name KITTIDC --split_json ..
     --top_crop 100 --test_crop --log_dir ../experiments/ --save NAME_TO_SAVE \
 ```
 
-Please refer to the config.py for more options. 
+Please refer to the config.py for more options.
 
-**For KITTI training, we emperically find the better results if more training time and GPUs are given**. 
+**For KITTI training, we emperically find the better results if more training time and GPUs are given**.
 
 During the training, tensorboard logs are saved under the experiments directory. To run the tensorboard:
 

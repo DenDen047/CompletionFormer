@@ -81,7 +81,10 @@ $ docker run -it --rm --gpus 1 \
     denden047/completion_former /bin/bash
 ```
 
+Download KITTI dataset.
+
 ```bash
+$
 $ python main.py \
     --dir_data PATH_TO_KITTI_DC \
     --data_name KITTIDC \

@@ -76,7 +76,25 @@ Please refer to the [PyTorch DCN](https://github.com/chengdazhi/Deformable-Convo
 
 ```bash
 $ docker build -t denden047/completion_former .
-$ docker run -it --rm --gpus 1 denden047/completion_former /bin/bash
+$ docker run -it --rm --gpus 1 \
+    -v /data/naoya/CompletionFormer:/data \
+    denden047/completion_former /bin/bash
+```
+
+```bash
+$ python main.py \
+    --dir_data PATH_TO_KITTI_DC \
+    --data_name KITTIDC \
+    --split_json ../data_json/kitti_dc_test.json \
+    --patch_height 240 \
+    --patch_width 1216 \
+    --gpus 1 \
+    --max_depth 90.0 \
+    --test_only \
+    --pretrain PATH_TO_WEIGHTS \
+    --save_image \
+    --save_result_only \
+    --save NAME_TO_SAVE
 ```
 
 

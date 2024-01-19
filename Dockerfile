@@ -20,7 +20,9 @@ RUN pip install -U pip
 RUN conda clean --all
 
 # Install MMCV
-RUN ["/bin/bash", "-c", "pip install --no-cache-dir mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu${CUDA//./}/torch${PYTORCH}/index.html"]
+# RUN ["/bin/bash", "-c", "pip install --no-cache-dir mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu${CUDA//./}/torch${PYTORCH}/index.html"]
+RUN pip install -U openmim
+RUN mim install mmcv-full==1.4.4
 
 # Install MMSegmentation
 RUN git clone https://github.com/open-mmlab/mmsegmentation.git /mmsegmentation
@@ -49,3 +51,5 @@ RUN ls -l /CompletionFormer
 WORKDIR /CompletionFormer/src/model/deformconv
 ENV CUDA_HOME /usr/local/cuda-11.3
 RUN bash make.sh
+
+WORKDIR /workspace

@@ -93,7 +93,7 @@ $ python main.py \
   --dir_data /data/nyudepthv2 \
   --data_name NYU \
   --split_json ../data_json/nyu.json \
-  --gpus 1 \
+  --gpus 0 \
   --max_depth 10.0 \
   --num_sample 500 \
   --save_image \

@@ -22,27 +22,29 @@ RUN conda clean --all
 # Install MMCV
 # RUN ["/bin/bash", "-c", "pip install --no-cache-dir mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu${CUDA//./}/torch${PYTORCH}/index.html"]
 RUN pip install -U openmim
-RUN mim install mmcv-full==1.4.4
+# RUN mim install mmcv-full==1.4.4
+RUN pip install mmcv==1.4.4 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.10/index.html
 
 # Install MMSegmentation
 RUN git clone https://github.com/open-mmlab/mmsegmentation.git /mmsegmentation
-RUN git clone --depth 1 --branch v0.22.1 https://github.com/open-mmlab/mmsegmentation.git
+RUN git clone --branch v0.22.1 https://github.com/open-mmlab/mmsegmentation.git
 WORKDIR /mmsegmentation
 ENV FORCE_CUDA="1"
 RUN pip install -r requirements.txt
-RUN pip install --no-cache-dir -e .
+RUN pip install -e .
 
-# RUN conda init
-# RUN conda create -n completionformer python=3.8 -y
-# RUN conda activate completionformer
-# RUN pip install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1+cu113
-# RUN pip install mmcv-full==1.4.4 mmsegmentation==0.22.1
-# RUN pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.10.0/index.html
-# RUN pip install -U openmim
-# RUN mim install mmcv-full==1.4.4
-# RUN mim install mmsegmentation==0.22.1
+# Install MMEngine
+RUN pip install mmengine
 
-RUN pip install timm tqdm thop tensorboardX opencv-python ipdb h5py ipython Pillow==9.5.0
+# Install NVIDIA Apex
+WORKDIR /
+RUN git clone https://github.com/NVIDIA/apex
+WORKDIR /apex
+RUN git reset --hard a78ccf0b3e3f7130b3f157732dc8e8e651389922
+RUN pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+
+# other packages
+RUN pip install timm tqdm thop tensorboardX opencv-python ipdb h5py ipython Pillow==9.5.0 setuptools==59.5.0
 
 # Install CompletionFormer
 ADD . /CompletionFormer

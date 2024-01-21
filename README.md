@@ -83,21 +83,24 @@ $ docker run -it --rm --gpus 1 \
 
 Download KITTI dataset.
 
+Start the container.
+
 ```bash
-$
+$ cd /CompletionFormer/utils && \
+  python generate_json_NYUDepthV2.py --path_root /data/nyudepthv2
+$ cd /CompletionFormer/src
 $ python main.py \
-    --dir_data PATH_TO_KITTI_DC \
-    --data_name KITTIDC \
-    --split_json ../data_json/kitti_dc_test.json \
-    --patch_height 240 \
-    --patch_width 1216 \
-    --gpus 1 \
-    --max_depth 90.0 \
-    --test_only \
-    --pretrain PATH_TO_WEIGHTS \
-    --save_image \
-    --save_result_only \
-    --save NAME_TO_SAVE
+  --dir_data /data/nyudepthv2 \
+  --data_name NYU \
+  --split_json ../data_json/nyu.json \
+  --gpus 1 \
+  --max_depth 10.0 \
+  --num_sample 500 \
+  --save_image \
+  --log_dir /data/nyudepthv2/logs/ \
+  --save nyudepthv2_result \
+  --test_only \
+  --pretrain /data/nyudepthv2/NYUv2.pt
 ```
 
 

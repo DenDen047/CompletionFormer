@@ -76,7 +76,8 @@ Please refer to the [PyTorch DCN](https://github.com/chengdazhi/Deformable-Convo
 
 ```bash
 $ docker build -t denden047/completion_former .
-$ docker run -it --rm --gpus 1 \
+$ docker run -it --rm \
+    --gpus device=0,1 \
     -v /data/naoya/CompletionFormer:/data \
     denden047/completion_former /bin/bash
 ```
@@ -90,17 +91,17 @@ $ cd /CompletionFormer/utils && \
   python generate_json_NYUDepthV2.py --path_root /data/nyudepthv2
 $ cd /CompletionFormer/src
 $ python main.py \
-  --dir_data /data/nyudepthv2 \
-  --data_name NYU \
-  --split_json ../data_json/nyu.json \
-  --gpus 0 \
-  --max_depth 10.0 \
-  --num_sample 500 \
-  --save_image \
-  --log_dir /data/nyudepthv2/logs/ \
-  --save nyudepthv2_result \
-  --test_only \
-  --pretrain /data/nyudepthv2/NYUv2.pt
+    --dir_data /data/nyudepthv2 \
+    --data_name NYU \
+    --split_json ../data_json/nyu.json \
+    --gpus 0 \
+    --max_depth 10.0 \
+    --num_sample 500 \
+    --save_image \
+    --log_dir /data/nyudepthv2/logs/ \
+    --save nyudepthv2_result \
+    --test_only \
+    --pretrain /data/nyudepthv2/NYUv2.pt
 ```
 
 

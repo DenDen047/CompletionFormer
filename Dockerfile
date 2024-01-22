@@ -20,15 +20,13 @@ RUN pip install -U pip
 RUN conda clean --all
 
 # Install MMCV
-# RUN ["/bin/bash", "-c", "pip install --no-cache-dir mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu${CUDA//./}/torch${PYTORCH}/index.html"]
 RUN pip install -U openmim
-# RUN mim install mmcv-full==1.4.4
 RUN pip install mmcv==1.4.4 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.10/index.html
 
-# Install MMSegmentation
+# Install MMSegmentation v0.22.1
 RUN git clone https://github.com/open-mmlab/mmsegmentation.git /mmsegmentation
-RUN git clone --branch v0.22.1 https://github.com/open-mmlab/mmsegmentation.git
 WORKDIR /mmsegmentation
+RUN git reset --hard e518d25e731be97aa1da704df83542f2951bdd21
 ENV FORCE_CUDA="1"
 RUN pip install -r requirements.txt
 RUN pip install -e .
@@ -53,5 +51,8 @@ RUN ls -l /CompletionFormer
 WORKDIR /CompletionFormer/src/model/deformconv
 ENV CUDA_HOME /usr/local/cuda-11.3
 RUN bash make.sh
+
+RUN pip install tensorboard
+
 
 WORKDIR /workspace

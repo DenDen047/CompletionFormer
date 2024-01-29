@@ -79,6 +79,7 @@ $ docker build -t denden047/completion_former .
 $ docker run -it --rm \
     --gpus device=1 \
     -v /data/naoya/CompletionFormer:/data \
+    -v /home/naoya/Projects/CompletionFormer:/workspace \
     denden047/completion_former /bin/bash
 ```
 
@@ -91,6 +92,23 @@ $ cd /CompletionFormer/utils && \
   python generate_json_NYUDepthV2.py --path_root /data/nyudepthv2
 $ cd /CompletionFormer/src
 $ python main.py \
+    --dir_data /data/nyudepthv2 \
+    --data_name NYU \
+    --split_json ../data_json/nyu.json \
+    --gpus 0 \
+    --max_depth 10.0 \
+    --num_sample 500 \
+    --save_image \
+    --log_dir /data/nyudepthv2/logs/ \
+    --save nyudepthv2_result \
+    --test_only \
+    --pretrain /data/nyudepthv2/NYUv2.pt
+```
+
+Demo code.
+```bash
+$ cd /workspace/src
+$ python demo.py \
     --dir_data /data/nyudepthv2 \
     --data_name NYU \
     --split_json ../data_json/nyu.json \

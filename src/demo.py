@@ -6,10 +6,12 @@
 """
 
 
+import sys
 from config import args as args_config
 import time
 import random
 import os
+from pprint import pprint
 os.environ["CUDA_VISIBLE_DEVICES"] = args_config.gpus
 os.environ["MASTER_ADDR"] = args_config.address
 os.environ["MASTER_PORT"] = args_config.port
@@ -73,11 +75,13 @@ def check_args(args):
 def test(args):
     # Prepare dataset
     data = get_data(args)
-
     data_test = data(args, 'test')
-
     loader_test = DataLoader(dataset=data_test, batch_size=1,
                              shuffle=False, num_workers=args.num_threads)
+
+    pprint(loader_test)
+    pprint(type(loader_test))
+    sys.exit(1)
 
     # Network
     if args.model == 'CompletionFormer':

@@ -77,7 +77,7 @@ Please refer to the [PyTorch DCN](https://github.com/chengdazhi/Deformable-Convo
 ```bash
 $ docker build -t denden047/completion_former .
 $ docker run -it --rm \
-    --gpus device=0,1 \
+    --gpus device=1 \
     -v /data/naoya/CompletionFormer:/data \
     denden047/completion_former /bin/bash
 ```

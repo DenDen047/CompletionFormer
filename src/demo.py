@@ -6,12 +6,10 @@
 """
 
 
-import sys
 from config import args as args_config
 import time
 import random
 import os
-from pprint import pprint
 os.environ["CUDA_VISIBLE_DEVICES"] = args_config.gpus
 os.environ["MASTER_ADDR"] = args_config.address
 os.environ["MASTER_PORT"] = args_config.port
@@ -43,6 +41,16 @@ from apex import amp
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+import sys
+from pprint import pprint
+from PIL import Image
+import h5py
+import torchvision.transforms as T
+import matplotlib.pyplot as plt
+from copy import deepcopy
+from summary import cfsummary
+
+
 # Minimize randomness
 def init_seed(seed=None):
     if seed is None:
@@ -72,25 +80,159 @@ def check_args(args):
     return new_args
 
 
+# https://github.com/pytorch/vision/issues/2194
+class ToNumpy:
+    def __call__(self, sample):
+        return np.array(sample)
+
+
+
+def get_sparse_depth(dep, num_sample):
+    channel, height, width = dep.shape
+
+    assert channel == 1
+
+    idx_nnz = torch.nonzero(dep.view(-1) > 0.0001, as_tuple=False)
+
+    num_idx = len(idx_nnz)
+    idx_sample = torch.randperm(num_idx)[:num_sample]
+
+    idx_nnz = idx_nnz[idx_sample[:]]
+
+    mask = torch.zeros((channel*height*width))
+    mask[idx_nnz] = 1.0
+    mask = mask.view((channel, height, width))
+
+    dep_sp = dep * mask.type_as(dep)
+
+    return dep_sp
+
+
+def visualize_result(sample, output):
+    # parameters
+    cmap = 'jet'
+    cm = plt.get_cmap(cmap)
+
+    # ImageNet normalization
+    img_mean = torch.tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
+    img_std = torch.tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
+
+    with torch.no_grad():
+        # Parse data
+        feat_init = output['pred_init']
+        list_feat = deepcopy(output['pred_inter'])
+
+        rgb = sample['rgb'].detach()
+        dep = sample['dep'].detach()
+        pred = output['pred'].detach()
+        gt = sample['gt'].detach()
+
+        pred = torch.clamp(pred, min=0)
+
+        # Un-normalization
+        rgb.mul_(img_std.type_as(rgb)).add_(img_mean.type_as(rgb))
+
+        rgb = rgb[0, :, :, :].data.cpu().numpy()
+        dep = dep[0, 0, :, :].data.cpu().numpy()
+        pred = pred[0, 0, :, :].data.cpu().numpy()
+        pred_gray = pred
+        gt = gt[0, 0, :, :].data.cpu().numpy()
+        feat_init = feat_init[0, 0, :, :].data.cpu().numpy()
+        max_depth = max(gt.max(), pred.max())
+        norm = plt.Normalize(vmin=gt.min(), vmax=gt.max())
+
+        rgb = np.transpose(rgb, (1, 2, 0))
+        for k in range(0, len(list_feat)):
+            feat_inter = deepcopy(list_feat[k])
+            feat_inter = feat_inter[0, 0, :, :].data.cpu().numpy()
+            feat_inter = np.concatenate((
+                rgb,
+                cm(norm(pred))[...,:3],
+                cm(norm(gt))[...,:3],
+                cfsummary.depth_err_to_colorbar(feat_inter, gt)
+            ), axis=0)
+
+            list_feat[k] = feat_inter
+
+        path_output = '.'
+        os.makedirs(path_output, exist_ok=True)
+
+        path_save_rgb = '{}/01_rgb.png'.format(path_output)
+        path_save_dep = '{}/02_dep.png'.format(path_output)
+        path_save_init = '{}/03_pred_init.png'.format(path_output)
+        path_save_pred = '{}/05_pred_final.png'.format(path_output)
+        path_save_pred_gray = '{}/05_pred_final_gray.png'.format(path_output)
+        path_save_gt = '{}/06_gt.png'.format(path_output)
+        path_save_error = '{}/07_error.png'.format(path_output)
+
+        plt.imsave(path_save_rgb, rgb, cmap=cmap)
+        plt.imsave(path_save_gt, cm(norm(gt)))
+        plt.imsave(path_save_pred, cm(norm(pred)))
+        plt.imsave(path_save_pred_gray, pred_gray, cmap='gray')
+        plt.imsave(path_save_dep, cm(norm(dep)))
+        plt.imsave(path_save_init, cm(norm(feat_init)))
+        plt.imsave(path_save_error, cfsummary.depth_err_to_colorbar(pred, gt, with_bar=True))
+
+        for k in range(0, len(list_feat)):
+            path_save_inter = '{}/04_pred_prop_{:02d}.png'.format(
+                path_output, k)
+            plt.imsave(path_save_inter, list_feat[k])
+
+
 def test(args):
-    # Prepare dataset
-    data = get_data(args)
-    data_test = data(args, 'test')
-    loader_test = DataLoader(dataset=data_test, batch_size=1,
-                             shuffle=False, num_workers=args.num_threads)
-    num_sample = len(loader_test) * loader_test.batch_size
+    # parameters for NYU Depth V2
+    height, width = (240, 320)
+    crop_size = (228, 304)
+    K = torch.Tensor([
+        5.1885790117450188e+02 / 2.0,
+        5.1946961112127485e+02 / 2.0,
+        3.2558244941119034e+02 / 2.0 - 8.0,
+        2.5373616633400465e+02 / 2.0 - 6.0
+    ])
 
-    for batch, sample in enumerate(loader_test):
-        sample = {key: val.cuda() for key, val in sample.items()
-                  if val is not None}
-        print(f'batch: {batch}')
-        pprint(sample)
-        print('rgb:', sample['rgb'].shape)
-        print('dep:', sample['dep'].shape)
+    # Prepare data
+    data_fpath = os.path.join(args.dir_data, 'val/official/00001.h5')
+    f = h5py.File(data_fpath, 'r')
+    rgb_h5 = f['rgb'][:].transpose(1, 2, 0) # [H, W, C], 0--255
+    dep_h5 = f['depth'][:]  # [H, W], 1.7985953--3.615639
 
-        break
+    rgb_img = Image.fromarray(rgb_h5, mode='RGB')
+    dep_img = Image.fromarray(dep_h5.astype('float32'), mode='F')
 
-    sys.exit(1)
+    t_rgb = T.Compose([
+        T.Resize(height),
+        T.CenterCrop(crop_size),
+        T.ToTensor(),
+        T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    ])
+
+    t_dep = T.Compose([
+        T.Resize(height),
+        T.CenterCrop(crop_size),
+        ToNumpy(),
+        T.ToTensor()
+    ])
+
+    rgb = t_rgb(rgb_img)
+    dep = t_dep(dep_img)
+
+    # make the sparse depth map
+    num_sample = args.num_sample
+    if num_sample < 1:
+        dep_sp = torch.zeros_like(dep)
+    else:
+        dep_sp = get_sparse_depth(dep, num_sample)
+
+    rgb = rgb.unsqueeze(0)
+    dep = dep.unsqueeze(0)
+    dep_sp = dep_sp.unsqueeze(0)
+
+    sample = {
+        'rgb': rgb,
+        'dep': dep_sp,
+        'gt': dep,
+        'K': K
+    }
 
     # Network
     if args.model == 'CompletionFormer':
@@ -131,39 +273,24 @@ def test(args):
 
     init_seed()
 
-    pbar = tqdm(total=num_sample)
-    t_total = 0
-    for batch, sample in enumerate(loader_test):
-        sample = {key: val.cuda() for key, val in sample.items()
-                  if val is not None}
+    # prediction
+    sample = {
+        key: val.cuda()
+        for key, val in sample.items() if val is not None
+    }
+    t0 = time.time()
+    with torch.no_grad():
+        output = net(sample)
+    t1 = time.time()
+    t_total = (t1 - t0)
+    print(f'processing time: {t_total} sec')
 
-        t0 = time.time()
-        with torch.no_grad():
-            output = net(sample)
-        t1 = time.time()
-        t_total += (t1 - t0)
+    # measure the performance
+    metric_val = metric.evaluate(sample, output, 'test')
+    print(f'loss: {metric_val}')
 
-        metric_val = metric.evaluate(sample, output, 'test')
-
-        writer_test.add(None, metric_val)
-
-        # Save data for analysis
-        if args.save_image:
-            writer_test.save(args.epochs, batch, sample, output)
-
-        current_time = time.strftime('%y%m%d@%H:%M:%S')
-        error_str = '{} | Test'.format(current_time)
-        if batch % args.print_freq == 0:
-            pbar.set_description(error_str)
-            pbar.update(loader_test.batch_size)
-
-    pbar.close()
-
-    writer_test.update(args.epochs, sample, output)
-
-    t_avg = t_total / num_sample
-    print('Elapsed time : {} sec, '
-          'Average processing time : {} sec'.format(t_total, t_avg))
+    # visualize the result
+    visualize_result(sample, output)
 
 
 def main(args):

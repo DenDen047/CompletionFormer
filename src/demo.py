@@ -78,9 +78,18 @@ def test(args):
     data_test = data(args, 'test')
     loader_test = DataLoader(dataset=data_test, batch_size=1,
                              shuffle=False, num_workers=args.num_threads)
+    num_sample = len(loader_test) * loader_test.batch_size
 
-    pprint(loader_test)
-    pprint(type(loader_test))
+    for batch, sample in enumerate(loader_test):
+        sample = {key: val.cuda() for key, val in sample.items()
+                  if val is not None}
+        print(f'batch: {batch}')
+        pprint(sample)
+        print('rgb:', sample['rgb'].shape)
+        print('dep:', sample['dep'].shape)
+
+        break
+
     sys.exit(1)
 
     # Network
@@ -94,6 +103,7 @@ def test(args):
         assert os.path.exists(args.pretrain), \
             "file not found: {}".format(args.pretrain)
 
+        # load the pretrained model, which might take a long time.
         checkpoint = torch.load(args.pretrain)
         key_m, key_u = net.load_state_dict(checkpoint['net'], strict=False)
 
@@ -108,7 +118,7 @@ def test(args):
         print('Checkpoint loaded from {}!'.format(args.pretrain))
 
     net = nn.DataParallel(net)
-
+    net.eval()
     metric = CompletionFormerMetric(args)
 
     try:
@@ -119,15 +129,10 @@ def test(args):
 
     writer_test = CompletionFormerSummary(args.save_dir, 'test', args, None, metric.metric_name)
 
-    net.eval()
-
-    num_sample = len(loader_test)*loader_test.batch_size
+    init_seed()
 
     pbar = tqdm(total=num_sample)
-
     t_total = 0
-
-    init_seed()
     for batch, sample in enumerate(loader_test):
         sample = {key: val.cuda() for key, val in sample.items()
                   if val is not None}
@@ -136,7 +141,6 @@ def test(args):
         with torch.no_grad():
             output = net(sample)
         t1 = time.time()
-
         t_total += (t1 - t0)
 
         metric_val = metric.evaluate(sample, output, 'test')

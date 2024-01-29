@@ -87,8 +87,8 @@ class NYU(BaseDataset):
                                  self.sample_list[idx]['filename'])
 
         f = h5py.File(path_file, 'r')
-        rgb_h5 = f['rgb'][:].transpose(1, 2, 0)
-        dep_h5 = f['depth'][:]
+        rgb_h5 = f['rgb'][:].transpose(1, 2, 0) # [H, W, C], 0--255
+        dep_h5 = f['depth'][:]  # [H, W], 1.7985953--3.615639
 
         rgb = Image.fromarray(rgb_h5, mode='RGB')
         dep = Image.fromarray(dep_h5.astype('float32'), mode='F')

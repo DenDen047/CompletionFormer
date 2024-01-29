@@ -25,8 +25,8 @@ class CompletionFormer(nn.Module):
                                     self.args.prop_kernel)
 
     def forward(self, sample):
-        rgb = sample['rgb']
-        dep = sample['dep']
+        rgb = sample['rgb'] # [B, C, H, W]
+        dep = sample['dep'] # [B, 1, H, W]
 
         pred_init, guide, confidence = self.backbone(rgb, dep)
         pred_init = pred_init + dep

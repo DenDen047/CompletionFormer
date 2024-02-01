@@ -114,7 +114,7 @@ $ python demo.py \
     --split_json ../data_json/nyu.json \
     --gpus 0 \
     --max_depth 10.0 \
-    --num_sample 500 \
+    --num_sample 150 \
     --save_image \
     --log_dir /data/nyudepthv2/logs/ \
     --save nyudepthv2_result \
